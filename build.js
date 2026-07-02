@@ -343,3 +343,77 @@ console.log(`  doc12: ${d12.stories.length} stories / ${d12.epics.length} epics;
 console.log(`  assumption-flagged stories: ${stories.filter((s) => s.assumptionFlagged).length}`);
 console.log(`  register: ${d17.crossCutting.length} cross-cutting, ${d17.perEpic.length} epic sections`);
 console.log("  per-epic: " + epics.map((e) => `${e.id}=${e.storyIds.length}`).join(" "));
+
+// ---- wireframe validation (runs only when wireframes.js exists) ----
+const wfPath = path.join(__dirname, "wireframes.js");
+if (fs.existsSync(wfPath)) {
+  const werr = [];
+  const we = (msg) => werr.push(msg);
+  global.window = global.window || {};
+  require(wfPath);
+  const W = global.window.SCOPE_WIREFRAMES;
+  if (!W || !Array.isArray(W.screens)) {
+    console.error("wireframes.js present but window.SCOPE_WIREFRAMES.screens missing");
+    process.exit(1);
+  }
+  const VB = { tv: "0 0 640 360", wide: "0 0 640 360", phone: "0 0 260 540", web: "0 0 640 400" };
+  const seenScreens = new Set();
+  const coveredEpics = new Set();
+  const scenarioNames = (story) =>
+    (story.gherkin.match(/^\s*Scenario(?: Outline)?: .*$/gm) || []).map((x) =>
+      x.replace(/^\s*Scenario(?: Outline)?: /, "").trim()
+    );
+  for (const sc of W.screens) {
+    const tag = `screen ${sc.id}`;
+    if (seenScreens.has(sc.id)) we(`${tag}: duplicate id`);
+    seenScreens.add(sc.id);
+    if (!["screen", "flow"].includes(sc.kind)) we(`${tag}: bad kind ${sc.kind}`);
+    sc.epicIds.forEach((eid) => {
+      if (!epicMap.has(eid)) we(`${tag}: unknown epic ${eid}`);
+      coveredEpics.add(eid);
+    });
+    sc.storyIds.forEach((sid) => {
+      const st = byId.get(sid);
+      if (!st) return we(`${tag}: unknown story ${sid}`);
+      if (!sc.epicIds.includes(st.epicId)) we(`${tag}: story ${sid} belongs to ${st.epicId}, not in epicIds`);
+    });
+    if (!sc.variants.length) we(`${tag}: no variants`);
+    sc.variants.forEach((v, i) => {
+      const s = v.svg.trim();
+      const vtag = `${tag} variant ${i} (${v.device})`;
+      if (!s.startsWith("<svg")) we(`${vtag}: does not start with <svg`);
+      if (!VB[v.device]) we(`${vtag}: unknown device`);
+      else if (s.indexOf(`viewBox="${VB[v.device]}"`) < 0) we(`${vtag}: viewBox is not "${VB[v.device]}"`);
+      if (/<script/i.test(s)) we(`${vtag}: contains <script`);
+      if (/\son[a-z]+\s*=/i.test(s)) we(`${vtag}: contains event handler attribute`);
+      if (/<image|<foreignObject/i.test(s)) we(`${vtag}: contains image/foreignObject`);
+      if (/url\s*\(/i.test(s)) we(`${vtag}: contains url() reference`);
+      if (/https?:\/\//.test(s.replace(/xmlns="http:\/\/www\.w3\.org\/2000\/svg"/g, ""))) we(`${vtag}: contains external URL`);
+    });
+    const nSeen = new Set();
+    const primary = sc.variants[0] ? sc.variants[0].svg : "";
+    sc.callouts.forEach((c) => {
+      const ctag = `${tag} callout ${c.n}`;
+      if (nSeen.has(c.n)) we(`${ctag}: duplicate n`);
+      nSeen.add(c.n);
+      if (!sc.storyIds.includes(c.storyId)) we(`${ctag}: storyId ${c.storyId} not in screen storyIds`);
+      const st = byId.get(c.storyId);
+      if (st && scenarioNames(st).indexOf(c.scenario) < 0)
+        we(`${ctag}: scenario "${c.scenario}" not found in ${c.storyId}`);
+      const badge = (primary.match(new RegExp(`data-n="${c.n}"`, "g")) || []).length;
+      if (badge !== 1) we(`${ctag}: primary variant has ${badge} badges with data-n="${c.n}" (need exactly 1)`);
+    });
+    const emDash = JSON.stringify(sc).indexOf("—") >= 0;
+    if (emDash) we(`${tag}: contains an em-dash character`);
+  }
+  const uncovered = [...epicMap.keys()].filter((id) => !coveredEpics.has(id));
+  if (uncovered.length) we(`epics with no screen or flow coverage: ${uncovered.join(", ")}`);
+  if (werr.length) {
+    console.error(`\nWIREFRAME VALIDATION FAILED (${werr.length} errors):`);
+    werr.forEach((x) => console.error("  " + x));
+    process.exit(1);
+  }
+  const totCallouts = W.screens.reduce((n, s) => n + s.callouts.length, 0);
+  const totVariants = W.screens.reduce((n, s) => n + s.variants.length, 0);
+  console.log(`OK: wireframes validated: ${W.screens.length} screens/flows, ${totVariants} variants, ${totCallouts} callouts, all epics covered`);
+}

@@ -20,6 +20,10 @@ node build.js [--src <path-to-docs-folder>]
 
 The default source path is `../Streaming/docs` relative to this folder. The script validates structure and counts, and fails loudly if the source format drifts; expected counts live in the `EXPECTED` constant at the top of `build.js`.
 
+## Wireframes
+
+`wireframes.js` holds lo-fi SVG wireframes (`window.SCOPE_WIREFRAMES`), each tagged to epics and story IDs, with numbered callout badges keyed to acceptance-criteria scenarios. They are authored artifacts (not generated from the docs); `node build.js` validates them against the story data: every referenced story and scenario name must exist, callout badges must be present in the primary variant, and SVGs must pass safety rules (no scripts, no external references). All wireframes are illustrative, not visual design.
+
 ## Hosting
 
 Served as a static site from the `main` branch via GitHub Pages. `.nojekyll` disables Jekyll processing. All routes are hash-based, so no SPA rewrite rules are needed.
