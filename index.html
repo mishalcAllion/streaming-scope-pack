@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Streaming Scope Pack</title>
+<style>
+:root{
+  --bg:#0E1014; --page:#12151B; --card:#1B2029; --card2:#20262f;
+  --gold:#E8B23A; --gold-dim:#8a6c28; --white:#F2F4F8; --body:#B9C0CC; --mut:#7d8794;
+  --border:#2E3742; --green:#6FBF8B; --blue:#7FB4E8; --purple:#B79FE0; --red:#E08A7F;
+  --font:"Segoe UI",system-ui,-apple-system,sans-serif; --mono:Consolas,"Cascadia Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--body);font-family:var(--font);font-size:15px;line-height:1.55}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border);padding:14px 22px 0}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.brand h1{color:var(--white);font-size:19px;font-weight:600}
+.brand .sub{color:var(--mut);font-size:12.5px}
+.tabs{display:flex;gap:2px;margin-top:10px}
+.tab{padding:8px 16px;border:none;background:none;color:var(--mut);font-family:var(--font);font-size:14px;cursor:pointer;border-bottom:2px solid transparent}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 22px;border-bottom:1px solid var(--border);background:var(--page)}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{padding:7px 14px;background:var(--card);border:none;color:var(--body);font-family:var(--font);font-size:13.5px;cursor:pointer}
+.seg button.on{background:var(--gold);color:#1a1405;font-weight:600}
+.seg button b{font-weight:inherit}
+#q{flex:1;min-width:160px;max-width:420px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--white);font-family:var(--font);font-size:14px}
+#q::placeholder{color:var(--mut)}
+.chip{padding:6px 12px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--body);font-size:12.5px;cursor:pointer;font-family:var(--font)}
+.chip.on{border-color:var(--gold);color:var(--gold)}
+#epicSel{display:none;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--white);font-family:var(--font)}
+main{display:grid;grid-template-columns:250px 1fr;gap:0;max-width:1400px;margin:0 auto}
+aside{border-right:1px solid var(--border);padding:16px 0;position:sticky;top:118px;height:calc(100vh - 118px);overflow-y:auto}
+.ep{display:flex;justify-content:space-between;gap:8px;width:100%;padding:7px 18px;border:none;background:none;color:var(--body);font-family:var(--font);font-size:13.5px;cursor:pointer;text-align:left;border-left:3px solid transparent}
+.ep:hover{color:var(--white)}
+.ep.on{color:var(--gold);border-left-color:var(--gold);background:rgba(232,178,58,.06)}
+.ep .n{color:var(--mut);font-size:12px}
+section#content{padding:20px 26px 80px;min-width:0}
+.intro{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:18px;font-size:13.5px;color:var(--body)}
+.ephead{margin:26px 0 6px}
+.ephead:first-child{margin-top:0}
+.ephead h2{color:var(--white);font-size:17px;font-weight:600}
+.ephead .sum{font-size:13.5px;color:var(--mut);margin-top:4px;max-width:900px}
+.shared{font-size:12.5px;color:var(--mut);background:var(--card);border:1px dashed var(--border);border-radius:8px;padding:8px 12px;margin:8px 0}
+.shared .chiplink{display:inline-block;margin:2px 3px 0 0;padding:1px 7px;border:1px solid var(--border);border-radius:999px;font-family:var(--mono);font-size:11px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin:12px 0;scroll-margin-top:130px}
+.card.hl{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.chead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.cid{font-family:var(--mono);font-size:12.5px;color:var(--gold)}
+.ctitle{color:var(--white);font-size:15.5px;font-weight:600;flex:1;min-width:200px}
+.badge{font-size:10.5px;padding:2px 8px;border-radius:999px;border:1px solid var(--border);white-space:nowrap}
+.b-ab{color:var(--green);border-color:var(--green)}
+.b-a{color:var(--blue);border-color:var(--blue)}
+.b-b{color:var(--purple);border-color:var(--purple)}
+.b-assum{color:var(--gold);border-color:var(--gold-dim)}
+.copy{border:none;background:none;color:var(--mut);cursor:pointer;font-size:13px;padding:0 4px}
+.copy:hover{color:var(--gold)}
+.frow{display:grid;grid-template-columns:150px 1fr;gap:10px;margin-top:9px;font-size:13.5px}
+.frow .lab{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.4px;padding-top:2px}
+.frow .val{white-space:pre-line;color:var(--body)}
+.prose{margin-top:10px;font-size:13.5px;color:var(--body);background:var(--card2);border-radius:8px;padding:9px 12px}
+table.mini{border-collapse:collapse;margin:6px 0;font-size:12.5px;width:100%}
+table.mini th,table.mini td{border:1px solid var(--border);padding:5px 9px;text-align:left;vertical-align:top}
+table.mini th{color:var(--white);background:var(--card2)}
+details.gk{margin-top:12px;border:1px solid var(--border);border-radius:8px;background:#161a21}
+details.gk summary{cursor:pointer;padding:8px 12px;color:var(--mut);font-size:12.5px;user-select:none}
+details.gk[open] summary{border-bottom:1px solid var(--border)}
+.gkbody{padding:10px 14px;overflow-x:auto}
+.gkbody pre{font-family:var(--mono);font-size:12.5px;line-height:1.6;color:var(--body)}
+.gk-scn{color:var(--gold);font-weight:600}
+.gk-kw{color:var(--blue);font-weight:600}
+.empty{color:var(--mut);padding:40px 0;text-align:center}
+.atab h2{color:var(--white);font-size:17px;margin:24px 0 10px}
+.atab h2:first-child{margin-top:0}
+.acard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin:10px 0}
+.acard h3{color:var(--gold);font-family:var(--mono);font-size:13.5px;margin-bottom:6px}
+.acard h4{color:var(--white);font-size:12.5px;text-transform:uppercase;letter-spacing:.4px;margin:10px 0 4px}
+.acard ul{margin-left:18px;font-size:13.5px}
+.acard li{margin:3px 0}
+footer{border-top:1px solid var(--border);color:var(--mut);font-size:12px;padding:14px 22px;text-align:center}
+@media (max-width:834px){
+  main{grid-template-columns:1fr}
+  aside{display:none}
+  #epicSel{display:block;width:100%}
+  .frow{grid-template-columns:1fr}
+  .frow .lab{padding-top:0}
+  header{padding:10px 14px 0}
+  .controls{padding:10px 14px}
+  section#content{padding:14px 14px 60px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Streaming Scope Pack</h1>
+    <span class="sub">Two options, user stories and acceptance criteria, for estimation</span>
+  </div>
+  <nav class="tabs">
+    <button class="tab" id="tab-stories">Stories</button>
+    <button class="tab" id="tab-assumptions">Assumptions</button>
+  </nav>
+</header>
+<div class="controls" id="controls">
+  <div class="seg" id="optSeg">
+    <button id="opt-A">Option A <b id="cntA"></b></button>
+    <button id="opt-B">Option B <b id="cntB"></b></button>
+  </div>
+  <input id="q" type="search" placeholder="Search stories, fields, acceptance criteria...">
+  <button class="chip" id="f-assum" title="Only stories carrying an assumption to confirm">Assumption-flagged</button>
+  <button class="chip" id="src-call" title="Sourced from a client call">Call-sourced</button>
+  <button class="chip" id="src-assumption" title="Source includes an assumption">Assumption-sourced</button>
+  <select id="epicSel"></select>
+</div>
+<main>
+  <aside id="sidebar"></aside>
+  <section id="content"></section>
+</main>
+<footer id="foot"></footer>
+<script src="data.js"></script>
+<script>
+(function(){
+"use strict";
+var D = window.SCOPE_DATA;
+var byId = {};
+D.stories.forEach(function(s){ byId[s.id] = s; });
+var epicById = {};
+D.epics.forEach(function(e){ epicById[e.id] = e; });
+
+// search haystacks
+D.stories.forEach(function(s){
+  s._hay = (s.id + " " + s.title + " " + s.fields.map(function(f){return f.label + " " + f.value;}).join(" ") + " " + s.gherkin).toLowerCase();
+});
+
+var state = { tab:"stories", option:"A", epic:null, q:"", assum:false, sources:{}, story:null };
+
+function esc(x){ return String(x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+var ID_RE = /[A-Z]+(?:-[A-Z]+)*-\d{2}/g;
+function linkIds(escaped){
+  return escaped.replace(ID_RE, function(t){
+    return byId[t] ? '<a href="#s='+t+'">'+t+'</a>' : t;
+  });
+}
+
+function inOption(s, o){
+  return o === "A" ? (s.options === "A+B" || s.options === "A only")
+                   : (s.options === "A+B" || s.options === "B only");
+}
+function matches(s){
+  if (!inOption(s, state.option)) return false;
+  if (state.epic && s.epicId !== state.epic) return false;
+  if (state.assum && !s.assumptionFlagged) return false;
+  var srcKeys = Object.keys(state.sources).filter(function(k){return state.sources[k];});
+  if (srcKeys.length && !srcKeys.some(function(k){ return s.sourceTypes.indexOf(k) >= 0; })) return false;
+  if (state.q){
+    var toks = state.q.toLowerCase().split(/\s+/).filter(Boolean);
+    for (var i=0;i<toks.length;i++) if (s._hay.indexOf(toks[i]) < 0) return false;
+  }
+  return true;
+}
+
+// ---- hash routing ----
+function writeHash(push){
+  var p = new URLSearchParams();
+  if (state.tab !== "stories") p.set("tab", state.tab);
+  if (state.option !== "A") p.set("o", state.option);
+  if (state.epic) p.set("e", state.epic);
+  if (state.q) p.set("q", state.q);
+  if (state.assum) p.set("f", "assum");
+  var srcs = Object.keys(state.sources).filter(function(k){return state.sources[k];});
+  if (srcs.length) p.set("src", srcs.join(","));
+  if (state.story) p.set("s", state.story);
+  var h = "#" + p.toString();
+  if (push) history.pushState(null, "", h); else history.replaceState(null, "", h);
+}
+function readHash(){
+  var p = new URLSearchParams(location.hash.slice(1));
+  state.tab = p.get("tab") === "assumptions" ? "assumptions" : "stories";
+  state.option = p.get("o") === "B" ? "B" : "A";
+  state.epic = p.get("e") && epicById[p.get("e")] ? p.get("e") : null;
+  state.q = p.get("q") || "";
+  state.assum = p.get("f") === "assum";
+  state.sources = {};
+  (p.get("src") || "").split(",").forEach(function(k){ if(k) state.sources[k] = true; });
+  state.story = p.get("s") && byId[p.get("s")] ? p.get("s") : null;
+  if (state.story){
+    var s = byId[state.story];
+    state.tab = "stories";
+    if (!inOption(s, state.option)) state.option = s.options === "B only" ? "B" : "A";
+    state.epic = s.epicId;
+  }
+}
+
+// ---- renderers ----
+function renderGherkin(raw){
+  var lines = raw.split("\n").map(function(l){
+    var e = esc(l);
+    var m = l.match(/^(\s*)(Scenario(?: Outline)?:)(.*)$/);
+    if (m) return esc(m[1]) + '<span class="gk-scn">' + esc(m[2]) + '</span>' + esc(m[3]);
+    m = l.match(/^(\s*)(Given|When|Then|And|But)(\b.*)$/);
+    if (m) return esc(m[1]) + '<span class="gk-kw">' + esc(m[2]) + '</span>' + esc(m[3]);
+    return e;
+  });
+  return '<pre>' + lines.join("\n") + '</pre>';
+}
+function renderBlockValue(value){
+  // unlabeled prose blocks: may contain markdown table lines and sub-bullets
+  var lines = value.split("\n");
+  var out = [], tbl = null;
+  function flushTbl(){
+    if (!tbl) return;
+    var rows = tbl.filter(function(r){ return !/^\|[\s:-]+\|/.test(r.replace(/\|/g,"|")); });
+    var cells = tbl.map(function(r){
+      return r.replace(/^\|/,"").replace(/\|$/,"").split("|").map(function(c){return c.trim();});
+    }).filter(function(cs){ return !cs.every(function(c){ return /^[-: ]*$/.test(c); }); });
+    if (cells.length){
+      var html = '<table class="mini">';
+      cells.forEach(function(cs, i){
+        html += "<tr>" + cs.map(function(c){ return (i===0?"<th>":"<td>") + linkIds(esc(c)) + (i===0?"</th>":"</td>"); }).join("") + "</tr>";
+      });
+      html += "</table>";
+      out.push(html);
+    }
+    tbl = null;
+  }
+  lines.forEach(function(l){
+    if (l.charAt(0) === "|"){ (tbl = tbl || []).push(l); }
+    else { flushTbl(); out.push("<div>" + linkIds(esc(l)) + "</div>"); }
+  });
+  flushTbl();
+  return out.join("");
+}
+function storyCard(s){
+  var optClass = s.options === "A+B" ? "b-ab" : (s.options === "A only" ? "b-a" : "b-b");
+  var h = '<article class="card" id="story-' + s.id + '">';
+  h += '<div class="chead"><span class="cid">' + s.id + '</span><span class="ctitle">' + esc(s.title) + '</span>';
+  h += '<span class="badge ' + optClass + '">' + esc(s.options) + '</span>';
+  if (s.assumptionFlagged) h += '<span class="badge b-assum">assumption</span>';
+  h += '<button class="copy" data-copy="' + s.id + '" title="Copy link to this story">#</button></div>';
+  s.fields.forEach(function(f){
+    if (f.label === "Acceptance criteria") return; // rendered below with the gherkin
+    if (f.label === ""){ h += '<div class="prose">' + renderBlockValue(f.value) + "</div>"; return; }
+    var val = linkIds(esc(f.value));
+    h += '<div class="frow"><div class="lab">' + esc(f.label) + '</div><div class="val">' + val + "</div></div>";
+  });
+  if (s.gherkin){
+    h += '<details class="gk" open><summary>Acceptance criteria (' + s.scenarioCount + ' scenario' + (s.scenarioCount===1?"":"s") + ')</summary><div class="gkbody">' + renderGherkin(s.gherkin) + "</div></details>";
+  }
+  h += "</article>";
+  return h;
+}
+function epicHeader(e){
+  var sum = state.option === "B" ? (e.summaryB || e.summaryA) : e.summaryA;
+  var h = '<div class="ephead"><h2>' + e.id + ": " + esc(e.title) + "</h2>";
+  if (sum) h += '<div class="sum">' + esc(sum) + "</div>";
+  h += "</div>";
+  if (state.option === "B" && e.sharedRef){
+    h += '<div class="shared">' + linkIds(esc(e.sharedRef.text));
+    if (e.sharedRef.resolvedIds.length){
+      h += "<div>" + e.sharedRef.resolvedIds.map(function(id){ return '<a class="chiplink" href="#s=' + id + '">' + id + "</a>"; }).join("") + "</div>";
+    }
+    h += "</div>";
+  }
+  return h;
+}
+function visibleEpics(){
+  return D.epics.filter(function(e){ return state.option === "A" ? e.inA : e.inB; });
+}
+function renderSidebar(){
+  var el = document.getElementById("sidebar");
+  var total = D.stories.filter(matches).length;
+  var h = '<button class="ep' + (state.epic===null?" on":"") + '" data-epic=""><span>All epics</span><span class="n">' + total + "</span></button>";
+  var sel = '<option value="">All epics (' + total + ')</option>';
+  visibleEpics().forEach(function(e){
+    var saveEpic = state.epic; state.epic = e.id;
+    var n = D.stories.filter(matches).length;
+    state.epic = saveEpic;
+    h += '<button class="ep' + (state.epic===e.id?" on":"") + '" data-epic="' + e.id + '"><span>' + e.id + '</span><span class="n">' + n + "</span></button>";
+    sel += '<option value="' + e.id + '"' + (state.epic===e.id?" selected":"") + ">" + e.id + " (" + n + ")</option>";
+  });
+  el.innerHTML = h;
+  document.getElementById("epicSel").innerHTML = sel;
+}
+function renderStories(){
+  var el = document.getElementById("content");
+  var h = "";
+  if (!state.epic && !state.q && !state.assum && !Object.keys(state.sources).some(function(k){return state.sources[k];})){
+    h += '<div class="intro">' + esc(state.option === "A" ? (D.meta.intro.A||"") : (D.meta.intro.B||"")) + "</div>";
+  }
+  var eps = state.epic ? [epicById[state.epic]] : visibleEpics();
+  var any = false;
+  eps.forEach(function(e){
+    var vis = e.storyIds.map(function(id){ return byId[id]; }).filter(matches);
+    if (!vis.length) return;
+    any = true;
+    h += epicHeader(e);
+    vis.forEach(function(s){ h += storyCard(s); });
+  });
+  if (!any) h += '<div class="empty">No stories match the current filters.</div>';
+  el.innerHTML = h;
+}
+function renderAssumptions(){
+  var el = document.getElementById("content");
+  var h = '<div class="atab"><h2>Cross-cutting assumptions (highest estimate impact first)</h2>';
+  h += '<table class="mini"><tr><th>#</th><th>Assumption</th><th>Impact if it changes</th></tr>';
+  D.assumptions.crossCutting.forEach(function(r){
+    h += "<tr><td>" + r.n + "</td><td>" + linkIds(esc(r.assumption)) + "</td><td>" + linkIds(esc(r.impact)) + "</td></tr>";
+  });
+  h += "</table><h2>Per-epic register</h2>";
+  D.assumptions.perEpic.forEach(function(pe){
+    h += '<div class="acard"><h3><a href="#tab=stories&e=' + pe.epicId + '">' + pe.epicId + "</a></h3>";
+    h += "<h4>Assumptions</h4><ul>" + pe.assumptions.map(function(a){ return "<li>" + linkIds(esc(a)) + "</li>"; }).join("") + "</ul>";
+    h += "<h4>Open questions</h4><ul>" + pe.openQuestions.map(function(a){ return "<li>" + linkIds(esc(a)) + "</li>"; }).join("") + "</ul></div>";
+  });
+  h += "</div>";
+  el.innerHTML = h;
+}
+function render(){
+  document.getElementById("tab-stories").className = "tab" + (state.tab==="stories"?" on":"");
+  document.getElementById("tab-assumptions").className = "tab" + (state.tab==="assumptions"?" on":"");
+  document.getElementById("opt-A").className = state.option==="A"?"on":"";
+  document.getElementById("opt-B").className = state.option==="B"?"on":"";
+  document.getElementById("cntA").textContent = "(" + D.counts.optionA + ")";
+  document.getElementById("cntB").textContent = "(" + D.counts.optionB + ")";
+  document.getElementById("f-assum").className = "chip" + (state.assum?" on":"");
+  document.getElementById("src-call").className = "chip" + (state.sources.call?" on":"");
+  document.getElementById("src-assumption").className = "chip" + (state.sources.assumption?" on":"");
+  var q = document.getElementById("q");
+  if (q.value !== state.q) q.value = state.q;
+  var storiesMode = state.tab === "stories";
+  document.getElementById("optSeg").style.display = storiesMode ? "flex" : "none";
+  document.getElementById("sidebar").style.visibility = storiesMode ? "visible" : "hidden";
+  ["q","f-assum","src-call","src-assumption","epicSel"].forEach(function(id){
+    document.getElementById(id).style.display = storiesMode ? "" : "none";
+  });
+  if (storiesMode){ renderSidebar(); renderStories(); }
+  else renderAssumptions();
+  document.getElementById("foot").textContent =
+    "Generated " + (D.generatedAt||"").slice(0,10) + " from the scoping pack source docs. " +
+    "Option A: " + D.counts.optionA + " stories. Option B: " + D.counts.optionB + " stories.";
+  if (state.story){
+    var card = document.getElementById("story-" + state.story);
+    if (card){
+      card.classList.add("hl");
+      setTimeout(function(){ card.scrollIntoView({block:"start"}); }, 30);
+    }
+  }
+}
+
+// ---- events ----
+function go(mut, push){ mut(); writeHash(push); render(); }
+document.getElementById("tab-stories").onclick = function(){ go(function(){ state.tab="stories"; state.story=null; }); };
+document.getElementById("tab-assumptions").onclick = function(){ go(function(){ state.tab="assumptions"; state.story=null; }); };
+document.getElementById("opt-A").onclick = function(){ go(function(){ state.option="A"; state.story=null; if (state.epic && !epicById[state.epic].inA) state.epic=null; }); };
+document.getElementById("opt-B").onclick = function(){ go(function(){ state.option="B"; state.story=null; }); };
+document.getElementById("f-assum").onclick = function(){ go(function(){ state.assum=!state.assum; state.story=null; }); };
+document.getElementById("src-call").onclick = function(){ go(function(){ state.sources.call=!state.sources.call; state.story=null; }); };
+document.getElementById("src-assumption").onclick = function(){ go(function(){ state.sources.assumption=!state.sources.assumption; state.story=null; }); };
+document.getElementById("epicSel").onchange = function(e){ go(function(){ state.epic=e.target.value||null; state.story=null; }); };
+var qTimer = null;
+document.getElementById("q").oninput = function(e){
+  clearTimeout(qTimer);
+  qTimer = setTimeout(function(){ go(function(){ state.q=e.target.value.trim(); state.story=null; }); }, 120);
+};
+document.getElementById("sidebar").addEventListener("click", function(e){
+  var b = e.target.closest("[data-epic]");
+  if (!b) return;
+  go(function(){ state.epic=b.getAttribute("data-epic")||null; state.story=null; });
+});
+document.getElementById("content").addEventListener("click", function(e){
+  var c = e.target.closest("[data-copy]");
+  if (!c) return;
+  var url = location.href.split("#")[0] + "#s=" + c.getAttribute("data-copy");
+  try {
+    navigator.clipboard.writeText(url).then(function(){ c.textContent="copied"; setTimeout(function(){c.textContent="#";},900); });
+  } catch(_){ window.prompt("Copy link:", url); }
+});
+window.addEventListener("hashchange", function(){ readHash(); render(); });
+
+readHash();
+writeHash(false);
+render();
+})();
+</script>
+</body>
+</html>
