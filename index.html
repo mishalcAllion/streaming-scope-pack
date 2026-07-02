@@ -120,6 +120,13 @@ g.co.pulse circle{animation:wpulse .8s ease 2;transform-origin:center;transform-
 .wchips{margin-top:10px;font-size:12px;color:var(--mut)}
 .wchips a{display:inline-block;margin:2px 4px 0 0;padding:1px 8px;border:1px solid var(--border);border-radius:999px;font-size:11px}
 @media (max-width:834px){.wvgrid{grid-template-columns:1fr}}
+/* overview */
+.ovwrap{overflow-x:auto}
+.ov .ovn{text-align:center;white-space:nowrap}
+.ov .ovA{color:var(--blue);text-align:center;font-weight:700}
+.ov .ovB{color:var(--purple);text-align:center;font-weight:700}
+.ovepic td{background:var(--card2);color:var(--gold);font-family:var(--mono);font-size:12px}
+.ovtot td{color:var(--white);font-weight:600;border-top:2px solid var(--gold-dim)}
 @media (max-width:834px){
   main{grid-template-columns:1fr}
   aside{display:none}
@@ -140,6 +147,7 @@ g.co.pulse circle{animation:wpulse .8s ease 2;transform-origin:center;transform-
   </div>
   <nav class="tabs">
     <button class="tab" id="tab-stories">Stories</button>
+    <button class="tab" id="tab-overview">Overview</button>
     <button class="tab" id="tab-assumptions">Assumptions</button>
   </nav>
 </header>
@@ -229,7 +237,8 @@ function writeHash(push){
 }
 function readHash(){
   var p = new URLSearchParams(location.hash.slice(1));
-  state.tab = p.get("tab") === "assumptions" ? "assumptions" : "stories";
+  var tb = p.get("tab");
+  state.tab = (tb === "assumptions" || tb === "overview") ? tb : "stories";
   state.option = p.get("o") === "B" ? "B" : "A";
   state.epic = p.get("e") && epicById[p.get("e")] ? p.get("e") : null;
   state.q = p.get("q") || "";
@@ -406,6 +415,44 @@ function renderStories(){
   if (!any) h += '<div class="empty">No stories match the current filters.</div>';
   el.innerHTML = h;
 }
+function renderOverview(){
+  var el = document.getElementById("content");
+  var h = '<div class="atab"><h2>Options at a glance</h2><div class="ovwrap"><table class="mini ov">';
+  h += '<tr><th>Epic</th><th>Covers</th><th>A stories</th><th>B-only</th><th>B stories</th><th>A scenarios</th><th>B scenarios</th><th>Screens</th></tr>';
+  var tot = { a:0, bo:0, b:0, sa:0, sb:0, scr:0 };
+  D.epics.forEach(function(e){
+    var sts = e.storyIds.map(function(id){ return byId[id]; });
+    var a = sts.filter(function(s){ return inOption(s, "A"); });
+    var b = sts.filter(function(s){ return inOption(s, "B"); });
+    var bo = sts.filter(function(s){ return s.options === "B only"; });
+    var sa = a.reduce(function(n,s){ return n + s.scenarioCount; }, 0);
+    var sb = b.reduce(function(n,s){ return n + s.scenarioCount; }, 0);
+    var scr = (screensByEpic[e.id] || []).length;
+    tot.a += a.length; tot.bo += bo.length; tot.b += b.length; tot.sa += sa; tot.sb += sb; tot.scr += scr;
+    h += '<tr><td><a href="#e=' + e.id + '">' + e.id + '</a></td><td>' + esc(e.title) + '</td>'
+      + '<td class="ovn">' + (e.inA ? a.length : "–") + '</td><td class="ovn">' + (bo.length || "–") + '</td><td class="ovn">' + b.length + '</td>'
+      + '<td class="ovn">' + (e.inA ? sa : "–") + '</td><td class="ovn">' + sb + '</td><td class="ovn">' + (scr || "–") + '</td></tr>';
+  });
+  h += '<tr class="ovtot"><td>Total</td><td></td><td class="ovn">' + tot.a + '</td><td class="ovn">' + tot.bo + '</td><td class="ovn">' + tot.b + '</td><td class="ovn">' + tot.sa + '</td><td class="ovn">' + tot.sb + '</td><td class="ovn">' + tot.scr + '</td></tr>';
+  h += '</table></div>';
+  h += '<h2>Story matrix</h2><div class="ovwrap"><table class="mini ov">';
+  h += '<tr><th>Story</th><th>Title</th><th>A</th><th>B</th><th>Scenarios</th><th>Notes</th></tr>';
+  D.epics.forEach(function(e){
+    h += '<tr class="ovepic"><td colspan="6">' + e.id + ': ' + esc(e.title) + (e.id === "B-SUB" ? ' (separately estimated variant)' : '') + '</td></tr>';
+    e.storyIds.forEach(function(id){
+      var s = byId[id];
+      if (!s) return;
+      h += '<tr><td><a href="#s=' + s.id + '">' + s.id + '</a></td><td>' + esc(s.title) + '</td>'
+        + '<td class="ovA">' + (inOption(s, "A") ? "✓" : "") + '</td>'
+        + '<td class="ovB">' + (inOption(s, "B") ? "✓" : "") + '</td>'
+        + '<td class="ovn" title="' + esc(s._scenarios.join("\n")) + '">' + s.scenarioCount + '</td>'
+        + '<td>' + (s.assumptionFlagged ? '<span class="badge b-assum">assumption</span>' : '') + '</td></tr>';
+    });
+  });
+  h += '</table></div>';
+  h += '<div class="wdisc">A = ' + D.counts.optionA + ' stories, B = ' + D.counts.optionB + ' stories (105 shared, 1 A-only, 53 B-only). Hover a scenario count to see scenario names; click a story ID for the full card.</div></div>';
+  el.innerHTML = h;
+}
 function renderAssumptions(){
   var el = document.getElementById("content");
   var h = '<div class="atab"><h2>Cross-cutting assumptions (highest estimate impact first)</h2>';
@@ -424,6 +471,7 @@ function renderAssumptions(){
 }
 function render(){
   document.getElementById("tab-stories").className = "tab" + (state.tab==="stories"?" on":"");
+  document.getElementById("tab-overview").className = "tab" + (state.tab==="overview"?" on":"");
   document.getElementById("tab-assumptions").className = "tab" + (state.tab==="assumptions"?" on":"");
   document.getElementById("opt-A").className = state.option==="A"?"on":"";
   document.getElementById("opt-B").className = state.option==="B"?"on":"";
@@ -441,6 +489,7 @@ function render(){
     document.getElementById(id).style.display = storiesMode ? "" : "none";
   });
   if (storiesMode){ renderSidebar(); renderStories(); }
+  else if (state.tab === "overview") renderOverview();
   else renderAssumptions();
   document.getElementById("foot").textContent =
     "Generated " + (D.generatedAt||"").slice(0,10) + " from the scoping pack source docs. " +
@@ -457,6 +506,7 @@ function render(){
 // ---- events ----
 function go(mut, push){ mut(); writeHash(push); render(); }
 document.getElementById("tab-stories").onclick = function(){ go(function(){ state.tab="stories"; state.story=null; }); };
+document.getElementById("tab-overview").onclick = function(){ go(function(){ state.tab="overview"; state.story=null; state.w=null; }); };
 document.getElementById("tab-assumptions").onclick = function(){ go(function(){ state.tab="assumptions"; state.story=null; }); };
 document.getElementById("opt-A").onclick = function(){ go(function(){ state.option="A"; state.story=null; if (state.epic && !epicById[state.epic].inA) state.epic=null; }); };
 document.getElementById("opt-B").onclick = function(){ go(function(){ state.option="B"; state.story=null; }); };
