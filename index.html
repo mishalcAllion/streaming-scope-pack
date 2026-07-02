@@ -127,6 +127,27 @@ g.co.pulse circle{animation:wpulse .8s ease 2;transform-origin:center;transform-
 .ov .ovB{color:var(--purple);text-align:center;font-weight:700}
 .ovepic td{background:var(--card2);color:var(--gold);font-family:var(--mono);font-size:12px}
 .ovtot td{color:var(--white);font-weight:600;border-top:2px solid var(--gold-dim)}
+.ovlink{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+.ovlink:hover{color:var(--gold)}
+.ovassum{cursor:pointer}
+/* drawer */
+#backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:49;opacity:0;pointer-events:none;transition:opacity .2s}
+#backdrop.open{opacity:1;pointer-events:auto}
+#drawer{position:fixed;top:0;right:0;width:min(480px,100vw);height:100vh;background:var(--page);border-left:1px solid var(--border);z-index:50;transform:translateX(105%);transition:transform .25s ease;overflow-y:auto;box-shadow:-12px 0 30px rgba(0,0,0,.45)}
+#drawer.open{transform:translateX(0)}
+.dhead{position:sticky;top:0;background:var(--page);border-bottom:1px solid var(--border);padding:13px 16px;display:flex;align-items:flex-start;gap:10px;justify-content:space-between;z-index:2}
+.dtitle{color:var(--white);font-size:14px;font-weight:600}
+.dbody{padding:14px 16px 50px}
+.dmeta{font-size:12px;color:var(--mut);margin-bottom:12px}
+.dsc{margin:8px 0}
+.dsc summary{color:var(--body);font-size:13px}
+.dsub{color:var(--white);font-size:12.5px;text-transform:uppercase;letter-spacing:.4px;margin:16px 0 6px}
+.dfield{margin:10px 0;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 12px}
+.dfield .lab{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.dfield .val{font-size:13px;white-space:pre-line}
+.dline{margin:8px 0;font-size:13px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 12px}
+.dline .scn{display:block;color:var(--gold);font-size:11.5px;font-family:var(--mono);margin-bottom:3px}
+.dhl{color:var(--gold)}
 @media (max-width:834px){
   main{grid-template-columns:1fr}
   aside{display:none}
@@ -167,6 +188,8 @@ g.co.pulse circle{animation:wpulse .8s ease 2;transform-origin:center;transform-
   <section id="content"></section>
 </main>
 <footer id="foot"></footer>
+<div id="backdrop"></div>
+<aside id="drawer" aria-label="Detail drawer"></aside>
 <script src="data.js"></script>
 <script src="wireframes.js"></script>
 <script>
@@ -190,6 +213,13 @@ var wDevice = null;
 D.stories.forEach(function(s){
   s._hay = (s.id + " " + s.title + " " + s.fields.map(function(f){return f.label + " " + f.value;}).join(" ") + " " + s.gherkin).toLowerCase();
   s._scenarios = (s.gherkin.match(/^\s*Scenario(?: Outline)?: .*$/gm) || []).map(function(x){ return x.replace(/^\s*Scenario(?: Outline)?: /, "").trim(); });
+  var blocks = [], cur = null;
+  s.gherkin.split("\n").forEach(function(l){
+    var m = l.match(/^\s*Scenario(?: Outline)?: (.*)$/);
+    if (m){ cur = { name: m[1].trim(), body: [l] }; blocks.push(cur); }
+    else if (cur) cur.body.push(l);
+  });
+  s._blocks = blocks.map(function(b){ return { name: b.name, body: b.body.join("\n").replace(/\s+$/, "") }; });
 });
 
 var state = { tab:"stories", option:"A", epic:null, q:"", assum:false, sources:{}, story:null, w:null };
@@ -415,6 +445,65 @@ function renderStories(){
   if (!any) h += '<div class="empty">No stories match the current filters.</div>';
   el.innerHTML = h;
 }
+function hiAssum(escaped){
+  return escaped.replace(/(Assumption - client to confirm|client to confirm|Assumption)/gi, '<span class="dhl">$1</span>');
+}
+function storyAssumptions(s){
+  var re = /assumption|client to confirm/i;
+  var fields = s.fields.filter(function(f){ return f.label !== "Acceptance criteria" && (re.test(f.value) || re.test(f.label)); });
+  var lines = [];
+  s._blocks.forEach(function(b){
+    b.body.split("\n").forEach(function(l){
+      if (re.test(l) && !/^\s*Scenario/.test(l)) lines.push({ scenario: b.name, line: l.trim() });
+    });
+  });
+  return { fields: fields, lines: lines };
+}
+function drawerHead(s, kind){
+  return '<div class="dhead"><div><span class="cid">' + s.id + '</span> <span class="dtitle">' + esc(s.title) + '</span><div class="dmeta" style="margin:4px 0 0">' + kind + ' · <a href="#s=' + s.id + '">open full story card</a></div></div><button class="wclose" data-dclose="1" title="Close">&times;</button></div>';
+}
+function drawerScenarios(s){
+  var h = drawerHead(s, s.scenarioCount + ' scenario' + (s.scenarioCount === 1 ? '' : 's'));
+  h += '<div class="dbody">';
+  s._blocks.forEach(function(b, i){
+    h += '<details class="gk dsc"><summary>' + (i + 1) + '. ' + esc(b.name) + '</summary><div class="gkbody">' + renderGherkin(b.body) + '</div></details>';
+  });
+  h += '</div>';
+  return h;
+}
+function drawerAssumptions(s){
+  var a = storyAssumptions(s);
+  var h = drawerHead(s, 'assumption-flagged content');
+  h += '<div class="dbody"><div class="dmeta">Everything in this story marked "client to confirm". The consolidated register is on the <a href="#tab=assumptions">Assumptions tab</a>.</div>';
+  if (a.fields.length){
+    h += '<div class="dsub">Flagged fields</div>';
+    a.fields.forEach(function(f){
+      h += '<div class="dfield"><div class="lab">' + esc(f.label || 'Note') + '</div><div class="val">' + hiAssum(esc(f.value)) + '</div></div>';
+    });
+  }
+  if (a.lines.length){
+    h += '<div class="dsub">Flagged acceptance-criteria lines</div>';
+    a.lines.forEach(function(x){
+      h += '<div class="dline"><span class="scn">' + esc(x.scenario) + '</span>' + hiAssum(esc(x.line)) + '</div>';
+    });
+  }
+  if (!a.fields.length && !a.lines.length){
+    h += '<div class="dmeta">No flagged fragments found in this story.</div>';
+  }
+  h += '</div>';
+  return h;
+}
+function openDrawer(html){
+  var d = document.getElementById("drawer");
+  d.innerHTML = html;
+  d.scrollTop = 0;
+  d.classList.add("open");
+  document.getElementById("backdrop").classList.add("open");
+}
+function closeDrawer(){
+  document.getElementById("drawer").classList.remove("open");
+  document.getElementById("backdrop").classList.remove("open");
+}
 function renderOverview(){
   var el = document.getElementById("content");
   var h = '<div class="atab"><h2>Options at a glance</h2><div class="ovwrap"><table class="mini ov">';
@@ -445,12 +534,12 @@ function renderOverview(){
       h += '<tr><td><a href="#s=' + s.id + '">' + s.id + '</a></td><td>' + esc(s.title) + '</td>'
         + '<td class="ovA">' + (inOption(s, "A") ? "✓" : "") + '</td>'
         + '<td class="ovB">' + (inOption(s, "B") ? "✓" : "") + '</td>'
-        + '<td class="ovn" title="' + esc(s._scenarios.join("\n")) + '">' + s.scenarioCount + '</td>'
-        + '<td>' + (s.assumptionFlagged ? '<span class="badge b-assum">assumption</span>' : '') + '</td></tr>';
+        + '<td class="ovn ovlink" data-dsc="' + s.id + '" title="Click to browse scenarios">' + s.scenarioCount + '</td>'
+        + '<td>' + (s.assumptionFlagged ? '<span class="badge b-assum ovassum" data-dassum="' + s.id + '" title="Click to see the flagged assumptions">assumption</span>' : '') + '</td></tr>';
     });
   });
   h += '</table></div>';
-  h += '<div class="wdisc">A = ' + D.counts.optionA + ' stories, B = ' + D.counts.optionB + ' stories (105 shared, 1 A-only, 53 B-only). Hover a scenario count to see scenario names; click a story ID for the full card.</div></div>';
+  h += '<div class="wdisc">A = ' + D.counts.optionA + ' stories, B = ' + D.counts.optionB + ' stories (105 shared, 1 A-only, 53 B-only). Click a scenario count to browse its scenarios, an assumption badge to see the flagged assumptions, or a story ID for the full card.</div></div>';
   el.innerHTML = h;
 }
 function renderAssumptions(){
@@ -533,6 +622,8 @@ document.getElementById("content").addEventListener("click", function(e){
     } catch(_){ window.prompt("Copy link:", url); }
     return;
   }
+  if ((t = e.target.closest("[data-dsc]"))){ openDrawer(drawerScenarios(byId[t.getAttribute("data-dsc")])); return; }
+  if ((t = e.target.closest("[data-dassum]"))){ openDrawer(drawerAssumptions(byId[t.getAttribute("data-dassum")])); return; }
   if ((t = e.target.closest("[data-w]"))){
     var wid = t.getAttribute("data-w");
     wDevice = null;
@@ -562,7 +653,12 @@ document.getElementById("content").addEventListener("click", function(e){
     return;
   }
 });
-window.addEventListener("hashchange", function(){ readHash(); render(); });
+document.getElementById("backdrop").addEventListener("click", closeDrawer);
+document.getElementById("drawer").addEventListener("click", function(e){
+  if (e.target.closest("[data-dclose]")) closeDrawer();
+});
+document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeDrawer(); });
+window.addEventListener("hashchange", function(){ readHash(); closeDrawer(); render(); });
 
 readHash();
 writeHash(false);
